@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+    <!--Spring的配置文件  与业务逻辑有关的-->
+
+    <!--扫描所有包-->
+    <context:component-scan base-package="top.wintp.crud">
+        <!--除了控制器 都进行注解扫描-->
+        <context:exclude-filter type="annotation"
+                                expression="org.springframework.stereotype.Controller"/>
+
+    </context:component-scan>
+
+    <!--引入properties配置文件-->
+    <context:property-placeholder location="classpath:db-config.properties"/>
+
+    <!--数据源，事物控制-->
+
+    <!--配置数据库连接池-数据源-->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="jdbcUrl" value="${jdbc.jdbcUrl}"/>
+        <property name="driverClass" value="${jdbc.driverClass}"/>
+        <property name="user" value="${jdbc.user}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+
+    <!--配置一个可以执行批量的sqlsession对象-->
+    <bean class="org.mybatis.spring.SqlSessionTemplate" id="sqlSession">
+
+        <constructor-arg name="sqlSessionFactory" ref="sqlSessionFactory"/>
+        <!--指定批量的执行类型-->
+        <constructor-arg name="executorType" value="BATCH"/>
+    </bean>
+
+
+    <!--配置和mybatis的整合 start-->
+    <!--创建sqlsessionFactory-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--指定mybatis全局配置文件的位置-->
+        <property name="configLocation" value="classpath:mybatis-config.xml"/>
+
+        <!--指定数据源-->
+        <property name="dataSource" ref="dataSource"/>
+
+        <!--指定mybatis mapper文件所在路径-->
+        <property name="mapperLocations" value="classpath:mapper/*.xml"/>
+    </bean>
+
+    <!--配置扫描器 将mybatis接口的实现加入到IOC容器中-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--配置扫描所有mapper接口-->
+        <property name="basePackage" value="top.wintp.crud.dao"/>
+    </bean>
+    <!--mybatis整合配置===============================end-->
+
+    <!--事物控制-->
+    <bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+          id="dataSourceTransactionManager">
+        <!--控制数据源-->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!--开启基于注解的事物，或者使用xml配置文件方式  (建议，比较重要的都是使用配置方式)-->
+    <aop:config>
+        <!--切入点表达式-->
+        <aop:pointcut id="txPointcut" expression="execution(* top.wintp.crud.service..*(..))"/>
+
+        <!--配置事物的增强-->
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="txPointcut"/>
+    </aop:config>
+
+    <tx:advice id="txAdvice" transaction-manager="dataSourceTransactionManager">
+        <tx:attributes>
+            <!--所有方法都是事物方法-->
+            <tx:method name="*"/>
+            <!--已get开头的所有方法-->
+            <tx:method name="get*" read-only="true"/>
+        </tx:attributes>
+
+    </tx:advice>
+
+    <!--Spring end-->
+    <!--Spring 配置文件核心点(数据源，与mybatis的整合，事物控制)-->
+
+
+    <!--shiro 配置方式-->
+
+    <!--注册realm-->
+    <bean id="myRealm" class="top.wintp.crud.service.MyRealm"/>
+
+
+    <!--配置安全管理器-->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="myRealm"/>
+    </bean>
+
+
+    <!--配置shiro过滤器工厂对象-->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+
+        <!--securityManager 注入安全管理器-->
+        <property name="securityManager" ref="securityManager"/>
+
+
+        <!--注入相关页面的访问URL-->
+
+        <property name="loginUrl" value="/user/login.do"/>
+        <!--<property name="successUrl"/>-->
+        <property name="unauthorizedUrl" value="/user/unAuth.do"/>
+
+
+        <!--
+            注入URL拦截规则
+        -->
+        <property name="filterChainDefinitions">
+            <value>
+                /static/** = anon
+                /user/login.do=anon
+                /user/loginUser.do=anon
+                /emp/findAll.do=perms["admin"]
+                /** = authc
+            </value>
+        </property>
+
+    </bean>
+
+
+</beans>

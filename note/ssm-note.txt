@@ -1,0 +1,308 @@
+整合步骤：
+
+1.创建maven项目：
+    配置maven项目为web项目
+2.添加项目jar包依赖
+    pom.xml
+3.配置web.xml文件
+4.创建spring-mvc.xml配置文件
+5.创建applicationContext.xml配置文件
+6.配置applicationContext.xml文件
+7.配置mybatis-config.xml文件
+8.创建需要的表
+9.使用mybatis的逆向工程来根据数据库表创建实体类(bean)以及mapper
+    (1)添加mybatis-generator.jar -->在maven中配置
+    (2)书写mbg.xml配置文件
+    (3)书写test/MBGTest类进行运行生成bean,mapper.xml,mapper接口
+10.根据业务逻辑,修改生成的mapper文件
+11.添加带有dept的查询
+12.测试dao层的mapper逻辑是否有误
+    搭建Spring单元测试
+       导入SpringTest模块
+    使用方法：
+        在测试类上添加注解：@ContextConfiguration 指定Spring配置文件的位置
+           @ContextConfiguration(locations={"calssPath:applicationContext.xml"}
+        在使用junit4的注解@RunWith(SpringJUnit4ClassRunner.class)--指定我们使用的是哪个测试的类
+            那么在方法上使用@Test注解就是引用的SpringJUnit4ClassRunner
+        直接autoWired要使用的组件即可
+
+
+13.配置一个可以执行批量的sqlSession的对象，在ioc容器中
+
+
+============================基础环境搭建完成=================================================
+1.实现打开index.jsp就显示所有的员工信息
+	1)访问index.jsp页面就要给后台发送一个查询员工列表的请求
+		在index.jsp中使用<jsp:forward>来直接发送请求
+	2)EmployeeController来接受请求，查出员工数据
+		调用service层进行查询所有员工
+		service层调用dao层进行查询所有员工
+		
+		优化：
+			在service层中进行分页查询
+			我们使用PageHelper工具插件，百度搜索该插件。
+			在github上有具体的使用方法
+			
+			
+    /*
+     * 在SpringMVC后台控制层获取参数的方式主要有两种，
+     * 一种是request.getParameter("name")，
+     * 另外一种是用注解@RequestParam直接获取
+     *
+     *
+     * 可以通过required=false或者true来要求@RequestParam配置的前端参数是否一定要传
+     *
+     * 建议使用包装类型代替基本类型
+     *
+     * defaultValue:默认值
+     * */
+    @RequestMapping("/findAll")
+    public String findAll(Model model, @RequestParam(value = "pageNum", defaultValue = "1")
+            Integer pageNum) {
+
+        //书写分页逻辑--在这里进行分页声明之后，后面紧跟的查询就是一个分页目标
+        //第二个参数是指定每次查询几条数据
+        PageHelper.startPage(pageNum, 5);
+
+        //调用Service里面的方法进行使用
+        List<Employee> allEmployees = mEmployeeService.findAll();
+        //使用PageInfo来包装返回的数据--可以更好的管理分页逻辑
+
+        //第二个参数是页面上最多显示几个页数，比如限制只显示5个那么就为1,2,3,4,5
+        //2,3,4,5,6||||3,4,5,6,7
+        PageInfo employeePageInfo = new PageInfo(allEmployees, 5);
+
+        //存储数据，跳转界面
+        model.addAttribute("employeePageInfo", employeePageInfo);
+        return "list";//在这里主要是在spring-mvc.xml中配置了前缀和后缀
+    }
+			
+	添加logback--打印log信息
+	使用SpringTest模拟前端请求
+	
+	
+	使用@RunWith来指定@Test运行的是SpringJunit4ClassRunner.class
+	在测试类上添加注解：@ContextConfiguration
+	locations添加配置文件--需要加applicationContext.xml,spring-mvc.xml两个配置文件
+	在测试类上添加注解@WebAppConfiguration-->就可以让SpringIOC可以自动装配自己的对象
+	@Autowired
+	WebApplicationContext context;
+	
+	MockMvc mockMvc;
+	
+	//创建MockMvc对象来虚拟mvc请求，获取到处理结果
+	@Before//这个注解是Junit的，是为了在每次使用的使用都初始化一次MokcMvc
+	public void initMockMvc(){
+		mockMvc = MockMvcBuilders.webAppContextSetup(context).build();//传入SpringMvc的IOC
+		
+	}
+	
+	public void testPage(){
+		//模拟请求，拿到返回值
+		MvcResult result = mockMvc.perform(MockMvc.RequestBuilders.get("url").param("key","value")).andReturn();
+		
+		//请求成功之后，请求域中会有在Controller里面存入的数据
+		result.getRequest();
+		//或者
+		result.getModelAndView()
+		
+		//从PageInfo中获取数据
+		pi.getList();
+		
+	}
+	
+	
+	4)来到list.jsp进行显示
+	
+
+web路径解释：
+    不以/开头的绝对路径，找资源，以当前资源的路径为基准，经常容易出问题。
+  推荐使用--以/开头的相对路径，找资源，以服务器的根路径为基准
+
+所以，在jsp的开头可以放置一个头配置
+    <% pageContext.setAttribute("APP_PATH",request.getContextPath())%>
+
+为了让多客户端共用一个服务器，我们让返回的数据为json字符串。
+
+首先，引入json的依赖包
+    <!--添加json依赖-->
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.8.9</version>
+        </dependency>
+
+
+让后台的接口返回不再是字符串，而是对象
+
+-------------------------   需要这么一个（注解）   @ResponseBody
+
+    @RequestMapping("/findAllWithJson")
+    @ResponseBody
+    public PageInfo<Employee> findAllWithJson(Model model, @RequestParam(value = "pageNum", defaultValue = "1")
+            Integer pageNum) {
+
+        logger.info("请求开始>>>>>");
+
+        //书写分页逻辑--在这里进行分页声明之后，后面紧跟的查询就是一个分页目标
+        //第二个参数是指定每次查询几条数据
+        PageHelper.startPage(pageNum, 5);
+
+        //调用Service里面的方法进行使用
+        List<Employee> allEmployees = mEmployeeService.findAll();
+        //使用PageInfo来包装返回的数据--可以更好的管理分页逻辑
+
+        //第二个参数是页面上最多显示几个页数，比如限制只显示5个那么就为1,2,3,4,5
+        //2,3,4,5,6||||3,4,5,6,7
+        PageInfo<Employee> employeePageInfo = new PageInfo<Employee>(allEmployees, 5);
+
+        logger.info("数据为："+employeePageInfo);
+
+        logger.info("请求结束>>>>>");
+
+        return employeePageInfo;
+    }
+
+-------------------------
+问题，上方的这种情况，无法让我们进行通用，所以我们进行封装一个含有我们自己的标志的一个实体类
+
+  /**
+     * 结果码
+     */
+    private int resultCode;
+    /**
+     * 结果消息
+     */
+    private String resultMsg;
+
+    /**
+     * 结果数据
+     */
+    private Map<String, Object> resultBody = new HashMap<>();
+
+    /**
+     * 成功的返回码
+     */
+    public static final int SUCCESS_CODE = 200;
+    /**
+     * 失败的返回码
+     */
+    public static final int FAIL_CODE = 500;
+
+    /**
+     * 成功的返回
+     *
+     * @return
+     */
+    public Msg resultSuccess() {
+        Msg msg = new Msg();
+        msg.setResultCode(SUCCESS_CODE);
+        msg.setResultMsg("请求成功");
+
+        return msg;
+    }
+
+    /**
+     * 失败的返回
+     *
+     * @return
+     */
+    public Msg resultFail() {
+        Msg msg = new Msg();
+        msg.setResultCode(FAIL_CODE);
+        msg.setResultMsg("请求失败");
+
+        return msg;
+    }
+
+    public Msg addResultBody(String key, Object value) {
+        this.getResultBody().put(key, value);
+        return this;
+    }
+----------------------------------------------------------------------
+
+点击新增按钮，弹出模态框。在bootstrap中，组件，JavaScript里面有
+
+--------------前端校验数据（JQuery）-------------------------------
+var rex = "正则表达式"
+rex.test(username)---返回boolean
+
+使用bootstrap美化前端校验数据
+
+----------------------------------------------------------
+检查员工姓名是否能用，
+EmployeeExample==的使用该方法
+EmployeeExample ex = new EmployeeExample();
+Criteria ca = ex.createCriteria();
+//添加条件
+ca.addEmpNameEqualTo("shaofei")
+
+//调用具体的方法进行查询数据
+
+-------------------------------------------------------------
+表单重置---拿到表单的jquery对象转为dom对象，调用reset方法
+
+校验数据：
+    1.jquery前端校验
+    2.ajax用户名重复校验
+    3.后端校验(Spring mvc 提供的JSR303校验  都应该加上后端校验功能。)
+
+
+如何使用JSR303 标准！
+    1.导入Hibernate-Validator
+    2.直接在实体类中的属性上使用注解来进行说明校验规则
+       (1)使用正则表达式来限定
+        @Pattern(regexp = "(^[a-z0-9_-]{6,16}$)|(^[\\u2E80-\\u9FFF]{2,3})",message = "姓名格式为6-16位英文字符，3-5位中文")
+       (2)直接使用注解
+          @Email
+          @Length(max = 12)
+    3.重要  在前端请求的接口方法中，封装的请求参数的前面加上注解(@Valid)
+
+
+    @RequestMapping(value = "/emps", method = RequestMethod.POST)
+    @ResponseBody
+    public Msg saveEmp(@Valid Employee employee, BindingResult result) {
+
+        if (result.hasErrors()) {
+            Map<String, Object> errorMap = new HashMap<>();
+
+            List<FieldError> fieldErrors = result.getFieldErrors();
+
+            for (FieldError fieldError : fieldErrors) {
+                errorMap.put(fieldError.getField(), fieldError.getDefaultMessage());
+            }
+
+            //校验失败
+            return Msg.resultFail().addResultBody("fieldErrors", errorMap);
+        }
+
+        mEmployeeService.saveEmp(employee);
+
+        return Msg.resultSuccess();
+    }
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+修改：
+    点击编辑，弹出模态框，把修改的所有字段进行填充，点击更新进行修改数据(用户名不能改)
+
+    因为编辑按钮和删除按钮都是通过访问服务器来创建的，所以说直接用代码绑定点击事件是不可行的。
+    我们可以在创建的时候进行创建点击事件。
+    或者，我们可以使用jquery的on方法来进行绑定后续出来的节点点击事件。
+    $(document).on("click",".btn-edit",function(){})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
