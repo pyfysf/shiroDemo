@@ -6,6 +6,7 @@ import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.SimpleAuthenticationInfo;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.authz.AuthorizationInfo;
+import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.realm.Realm;
 import org.apache.shiro.subject.PrincipalCollection;
@@ -43,9 +44,17 @@ public class MyRealm extends AuthorizingRealm {
     doGetAuthorizationInfo(PrincipalCollection principalCollection) {
 
         System.out.println("自定义realm授权方法");
+        TUser user = (TUser) principalCollection.getPrimaryPrincipal();
+
+        System.out.println(user.getUsername());
+        System.out.println(user.getPassword());
+
+        SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
+
+        authorizationInfo.addStringPermission("admin");
 
         //授权
-        return null;
+        return authorizationInfo;
     }
 
     @Override
