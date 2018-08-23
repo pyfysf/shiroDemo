@@ -57,6 +57,9 @@ public class MyRealm extends AuthorizingRealm {
         return authorizationInfo;
     }
 
+
+
+
     @Override
     protected AuthenticationInfo
     doGetAuthenticationInfo(AuthenticationToken authenticationToken) throws AuthenticationException {
