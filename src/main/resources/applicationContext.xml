@@ -133,12 +133,24 @@
                 /static/** = anon
                 /user/login.do=anon
                 /user/loginUser.do=anon
-                /emp/findAll.do=perms["admin"]
+                <!--/emp/findAll.do=perms["admin"]-->
                 /** = authc
             </value>
         </property>
 
     </bean>
+
+<!--
+    &lt;!&ndash;开启shiro 框架的注解支持&ndash;&gt;
+    <bean id="advisorAutoProxyCreator"
+          class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator">
+        &lt;!&ndash;默认开启CGLIB代理&ndash;&gt;
+        <property name="proxyTargetClass" value="true"/>
+    </bean>
+
+    &lt;!&ndash;配置切面  用于创建代理对象&ndash;&gt;
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor"/>
+-->
 
 
 </beans>

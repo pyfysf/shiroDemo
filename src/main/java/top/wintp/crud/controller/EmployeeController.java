@@ -3,6 +3,7 @@ package top.wintp.crud.controller;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,7 @@ public class EmployeeController {
 
     @RequestMapping(value = "/checkEmpName", method = RequestMethod.GET)
     @ResponseBody
+    @RequiresPermissions("emp-check")
     public Msg checkEmpByName(@RequestParam("empName") String empName) {
         boolean isUse = mEmployeeService.checkEmpByName(empName);
         if (isUse) {
@@ -92,6 +94,7 @@ public class EmployeeController {
      * defaultValue:默认值
      * */
     @RequestMapping("/findAll")
+    @RequiresPermissions("emp-check")
     public String findAll(Model model, @RequestParam(value = "pageNum", defaultValue = "1")
             Integer pageNum) {
 
