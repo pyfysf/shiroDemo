@@ -7,6 +7,7 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" isELIgnored="false" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="shiro" uri="http://shiro.apache.org/tags" %>
 <% pageContext.setAttribute("appPath", request.getContextPath()); %>
 <html>
 <head>
@@ -83,6 +84,8 @@
 
             </div>
             <div class="modal-footer">
+
+
                 <button type="button" class="btn btn-default" id="btn_update_close">关闭</button>
                 <button type="button" class="btn btn-primary" id="btn_update_save">更新</button>
             </div>
@@ -172,8 +175,11 @@
     <%--新增和删除--%>
     <div class="row">
         <div class="col-md-4 col-md-offset-8">
-            <button class="btn btn-primary" id="btn_add_emp">新增</button>
-            <button class="btn btn-danger btn_all_del">删除</button>
+            <shiro:hasPermission name="admin">
+
+                <button class="btn btn-primary" id="btn_add_emp">新增</button>
+                <button class="btn btn-danger btn_all_del">删除</button>
+            </shiro:hasPermission>
         </div>
     </div>
     <%--表格--%>
@@ -646,17 +652,17 @@
 
         //获取所有被选中的item
         $(".check-td-item:checked").each(function (i, item) {
-           var name = $(item).parents("tr").find("td:eq(2)").text();
-           var id = $(item).parents("tr").find("td:eq(1)").text();
+            var name = $(item).parents("tr").find("td:eq(2)").text();
+            var id = $(item).parents("tr").find("td:eq(1)").text();
             names[i] = name
-            ids[i]=id
+            ids[i] = id
         })
 
 
-        if (confirm("是否删除【"+names+"】？")) {
+        if (confirm("是否删除【" + names + "】？")) {
             $.ajax({
                 url: "${appPath}/emp/delBanch.do",
-                data: {ids:ids.toString()},
+                data: {ids: ids.toString()},
                 type: "POST",
                 dataType: "json",
                 success: function (result) {
