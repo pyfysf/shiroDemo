@@ -108,6 +108,15 @@
     <!--配置安全管理器-->
     <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
         <property name="realm" ref="myRealm"/>
+        <property name="cacheManager" ref="cacheManager"/>
+    </bean>
+
+    <!--注册shiro的缓存管理器  将其注册为安全管理器
+        在shiro-all.jar中
+    -->
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <!--指定ehcache的配置文件-->
+        <property name="cacheManagerConfigFile" value="classpath:ehcache.xml"></property>
     </bean>
 
 
@@ -140,17 +149,59 @@
 
     </bean>
 
-<!--
-    &lt;!&ndash;开启shiro 框架的注解支持&ndash;&gt;
-    <bean id="advisorAutoProxyCreator"
-          class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator">
-        &lt;!&ndash;默认开启CGLIB代理&ndash;&gt;
-        <property name="proxyTargetClass" value="true"/>
+    <!--
+        &lt;!&ndash;开启shiro 框架的注解支持&ndash;&gt;
+        <bean id="advisorAutoProxyCreator"
+              class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator">
+            &lt;!&ndash;默认开启CGLIB代理&ndash;&gt;
+            <property name="proxyTargetClass" value="true"/>
+        </bean>
+
+        &lt;!&ndash;配置切面  用于创建代理对象&ndash;&gt;
+        <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor"/>
+    -->
+
+
+    <!--定时任务配置 quartz -->
+
+    <!--配置我们自定义的任务类-->
+    <bean id="myTask" class="top.wintp.crud.task.MyTask"/>
+    <!--配置jobDetail  任务详情 spring-context-support-->
+    <bean id="jobDetail"
+          class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+
+        <!--配置用到的job示例(目标对象)-->
+        <property name="targetObject" ref="myTask"/>
+
+        <!--job中需要执行的方法(目标方法)-->
+        <property name="targetMethod" value="execute"></property>
+
     </bean>
 
-    &lt;!&ndash;配置切面  用于创建代理对象&ndash;&gt;
-    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor"/>
--->
+    <!--配置触发器(配置任务执行时间)-->
+    <bean id="cronTriggerFactoryBean"
+          class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
 
+        <!--注入任务详情-->
+        <property name="jobDetail" ref="jobDetail"/>
+
+        <!--设置任务执行的时间(使用cron表达式进行标识)  即通过表达式进行指定任务执行的时间点-->
+        <property name="cronExpression">
+            <!--每两秒执行一次-->
+            <value>0/2 * * * * ?</value>
+        </property>
+
+    </bean>
+
+    <!--配置调度工厂-->
+    <bean id="schedulerFactoryBean"
+          class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+        <property name="triggers">
+            <list>
+                <ref bean="cronTriggerFactoryBean"/>
+                <!--可以配置多个-->
+            </list>
+        </property>
+    </bean>
 
 </beans>
